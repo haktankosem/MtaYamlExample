@@ -1,0 +1,114 @@
+_schema-version: "3.2"
+ID: project2
+version: 0.0.18
+modules:
+- name: project2-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: project2-destination-service
+    parameters:
+      content-target: true
+  - name: project2-connectivity-service #needed if you would like to connect on-premise backends
+  - name: project2_html_repo_host
+    parameters:
+      service-key:
+        name: project2_html_repo_host-key
+  - name: uaa_project2
+    parameters:
+      service-key:
+        name: uaa_project2-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: project2mtaapprouter_project2_html_repo_host
+          ServiceInstanceName: project2-html5-app-host-service
+          ServiceKeyName: project2_html_repo_host-key
+          sap.cloud.service: project2mtaapprouter
+        - Authentication: OAuth2UserTokenExchange
+          Name: project2mtaapprouter_uaa_project2
+          ServiceInstanceName: project2-xsuaa-service
+          ServiceKeyName: uaa_project2-key
+          sap.cloud.service: project2mtaapprouter
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: project2-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: project2_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - projectmta.zip
+      name: projectmta
+      target-path: resources/
+- name: projectmta
+  type: html5
+  path: projectmta
+  requires:
+    - name: project2-connectivity-service # On-premise erişimi için ŞART
+    - name: project2-destination-service  # Destination okumak için ŞART  
+    - name: uaa_project2                  # Login ekranı için zaten var
+  parameters:
+    service-name: projectmta # BU SATIRI EKLEYİN    
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: project2-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+            destinations:
+            - Authentication: BasicAuthentication
+              Name: THR
+              ProxyType: OnPremise
+              Type: HTTP
+              URL: http://bhldssapp2.internal.borusan.com:443
+              CloudConnectorLocationId: BTP_DEV_Global
+              User: BTPRFCUSER
+              Password: Borusan2@25!!!
+              HTML5.DynamicDestination: true
+              HTML5.ForwardAuthToken: true
+              WebIDEEnabled : true
+              WebIDESystem : THR
+              WebIDEUsage: odata_abap,ui5_execute_abap,dev_abap 
+              sap-client: "100"
+              sap.cloud.service: project2mtaapprouter      
+      version: 1.0.0
+    service: destination
+    service-name: project2-destination-service
+    service-plan: lite
+- name: project2-connectivity-service
+  type: org.cloudfoundry.managed-service  
+  parameters:
+    service-plan: lite
+    service: connectivity
+- name: project2_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: project2-html5-app-host-service
+    service-plan: app-host
+- name: uaa_project2
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: project2-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true

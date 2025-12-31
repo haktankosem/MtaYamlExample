@@ -1,0 +1,7 @@
+<mvc:View controllerName="projectmta.controller.View1"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page id="page" title="{i18n>title} ya 19" >
+    <Text   text="{HeaderModel>/Ename} "> </Text>
+    </Page>
+</mvc:View>
